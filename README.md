@@ -10,7 +10,7 @@ A vagrant script for setting up a Kubernetes cluster using Kubeadm
 ## How to Run
 
 Clone the repo with:
-`go get -d https://github.com/pxsalehi/localcluster`
+`go get -d github.com/pxsalehi/localcluster`
 
 In `cluster.sh`, define following variables:
 * `docker_registry`: where the docker registry is located, including port
