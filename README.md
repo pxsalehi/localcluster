@@ -5,43 +5,41 @@ A vagrant script for setting up a Kubernetes cluster using Kubeadm
 
  * **[Vagrant 2.1.4+](https://www.vagrantup.com)**
  * **[Virtualbox 5.2.18+](https://www.virtualbox.org)**
+ * **[Vagrant disk resize plugin](https://github.com/sprotheroe/vagrant-disksize)**
 
 ## How to Run
 
-Execute the following vagrant command to start a new Kubernetes cluster, this will start one master and two nodes:
+In `cluster.sh`, define following variables:
+* `docker_registry`: where the docker registry is located, including port
+* `vagrant_k8s_folder`: path to this repo 
 
-```
-vagrant up
-```
+#### Start cluster
 
-You can also start invidual machines by vagrant up k8s-head, vagrant up k8s-node-1 and vagrant up k8s-node-2
+`CLUSTER_TYPE=[multi | single] ./cluster.sh start_k8s`
 
-If more than two nodes are required, you can edit the servers array in the Vagrantfile
+`single` is a one node cluster and `multi` is a three node cluster with two workers. default is `multi`. Resources for the nodes can be changed in `Vagrantfile`.
 
-```
-servers = [
-    {
-        :name => "k8s-node-3",
-        :type => "node",
-        :box => "ubuntu/xenial64",
-        :box_version => "20180831.0.0",
-        :eth1 => "192.168.205.13",
-        :mem => "2048",
-        :cpu => "2"
-    }
-]
- ```
+Once finished, helm is also installed. The kubeconfig file is copied to ~/.kube/config.
 
-As you can see above, you can also configure IP address, memory and CPU in the servers array. 
+You can ssh into master with vagrant@master_ip with password vagrant. SSH with workers is only via key which is under `.vagrant/machines`. Example:
 
-## Clean-up
+`ssh -i ~/go/src/github.com/pxsalehi/localcluster/.vagrant/machines/k8s-node1/virtualbox/private_key vagrant@192.168.205.11`
 
-Execute the following command to remove the virtual machines created for the Kubernetes cluster.
-```
-vagrant destroy -f
-```
+Docker and Kubernetes version can be changed in `configure_box.sh`.
 
-You can destroy individual machines by vagrant destroy k8s-node-1 -f
+Master also has an NFS server installed and by default there are 10 available PVs created. This can be adjusted in `cluster.sh`.
+
+#### Suspend the cluster
+
+`./cluster.sh suspend_k8s`
+
+#### Resume the suspended cluster
+
+`./cluster.sh resume_k8s`
+
+#### Tear down the cluster
+
+`./cluster.sh tear_down_k8s`
 
 ## Licensing
 

@@ -1,33 +1,39 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+k8sMasterIP = "192.168.205.10"
+k8sNode1IP  = "192.168.205.11"
+k8sNode2IP  = "192.168.205.12"
+dockerRegistry = ENV["DOCKER_REGISTRY"]
+k8sType = ENV["K8S_TYPE"]
+
 multiNodes = [
     {
-        :name => "k8s-head",
+        :name => "k8s-master",
         :type => "master",
         :box => "ubuntu/xenial64",
         :box_version => "20180831.0.0",
-        :eth1 => "192.168.205.10",
+        :eth1 => k8sMasterIP,
         :mem => "4096",
         :cpu => "2",
         :disk => "50GB"
     },
     {
-        :name => "k8s-node-1",
+        :name => "k8s-node1",
         :type => "node",
         :box => "ubuntu/xenial64",
         :box_version => "20180831.0.0",
-        :eth1 => "192.168.205.11",
+        :eth1 => k8sNode1IP,
         :mem => "8192",
         :cpu => "2",
         :disk => "50GB"
     },
     {
-        :name => "k8s-node-2",
+        :name => "k8s-node2",
         :type => "node",
         :box => "ubuntu/xenial64",
         :box_version => "20180831.0.0",
-        :eth1 => "192.168.205.12",
+        :eth1 => k8sNode2IP,
         :mem => "4096",
         :cpu => "2",
         :disk => "50GB"
@@ -36,24 +42,26 @@ multiNodes = [
 
 singleNode = [
     {
-        :name => "k8s-head",
+        :name => "k8s-master",
         :type => "master",
         :box => "ubuntu/xenial64",
         :box_version => "20180831.0.0",
-        :eth1 => "192.168.205.10",
+        :eth1 => k8sMasterIP,
         :mem => "16384",
-        :cpu => "6",
-        :disk => "100GB"
+        :cpu => "4",
+        :disk => "50GB"
     }
 ]
 
-
-
-k8sType = ENV["K8S_TYPE"]
 k8sType = "multi" if k8sType.nil? || k8sType.empty?
 
 if k8sType != "single" && k8sType != "multi"
     puts "only k8s type of 'single' and 'multi' is acceptable"
+    exit
+end
+
+if dockerRegistry.nil? || dockerRegistry.empty?
+    puts "you need to define the env variable DOCKER_REGISTRY"
     exit
 end
 
@@ -63,164 +71,7 @@ if k8sType == "single"
 end
 
 puts "Kubernetes deployment type is #{k8sType}"
-
-
-# This script to install k8s using kubeadm will get executed after a box is provisioned
-$configureBox = <<-SCRIPT
-
-    # install docker v17.03
-    # reason for not using docker provision is that it always installs latest version of the docker, but kubeadm requires 17.03 or older
-    apt-get update
-    apt-get install -y apt-transport-https ca-certificates curl software-properties-common
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-    add-apt-repository "deb https://download.docker.com/linux/$(. /etc/os-release; echo "$ID") $(lsb_release -cs) stable"
-    apt-get update && apt-get install -y docker-ce=$(apt-cache madison docker-ce | grep 17.03 | head -1 | awk '{print $3}')
-
-    # run docker commands as vagrant user (sudo not required)
-    usermod -aG docker vagrant
-
-    # install kubeadm
-    apt-get install -y apt-transport-https curl
-    curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
-    cat <<EOF >/etc/apt/sources.list.d/kubernetes.list
-    deb http://apt.kubernetes.io/ kubernetes-xenial main
-EOF
-    apt-get update
-    apt-get install -y kubelet=1.14.0-00 kubeadm=1.14.0-00 kubectl=1.14.0-00
-    apt-mark hold kubelet kubeadm kubectl
-
-    # kubelet requires swap off
-    swapoff -a
-
-    # keep swap off after reboot
-    sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
-
-    # ip of this box
-    IP_ADDR=`ifconfig enp0s8 | grep Mask | awk '{print $2}'| cut -f2 -d:`
-    # set node-ip
-    # sudo sed -i "/^[^#]*KUBELET_EXTRA_ARGS=/c\KUBELET_EXTRA_ARGS=--node-ip=$IP_ADDR" /etc/default/kubelet
-    echo -e "KUBELET_EXTRA_ARGS=--node-ip=$IP_ADDR" | sudo tee /etc/default/kubelet
-    sudo systemctl restart kubelet
-
-SCRIPT
-
-$configureMasterMulti = <<-SCRIPT
-    echo "This is master of multi-node k8s cluster"
-    # ip of this box
-    IP_ADDR=`ifconfig enp0s8 | grep Mask | awk '{print $2}'| cut -f2 -d:`
-
-    echo 'adding insecure registries...'
-    echo '{ "insecure-registries":["10.18.84.169:5000" ,"docker.wdf.sap.corp:50000"] }' | sudo tee /etc/docker/daemon.json
-    sudo service docker restart
-
-    # setup nfs server
-    sudo apt-get install -y nfs-kernel-server
-    sudo mkdir /var/nfs -p
-    sudo chown nobody:nogroup /var/nfs
-
-    # write mounts to /etc/export
-    echo -e "/var/nfs 192.168.205.11(rw,sync,no_subtree_check,no_root_squash)\n/var/nfs 192.168.205.12(rw,sync,no_subtree_check,no_root_squash)" | sudo tee -a /etc/exports
-
-    sudo systemctl restart nfs-kernel-server
-    sudo chmod a+rwx /var/nfs
-    sudo ls -l /var
-
-    # setup docker registry. TRY again!
-    # docker run -d -p 5000:5000 --restart=always --name registry registry:2
-
-    # install k8s master
-    HOST_NAME=$(hostname -s)
-    kubeadm init --apiserver-advertise-address=$IP_ADDR --apiserver-cert-extra-sans=$IP_ADDR  --node-name $HOST_NAME --pod-network-cidr=172.16.0.0/16
-
-    #copying credentials to regular user - vagrant
-    sudo --user=vagrant mkdir -p /home/vagrant/.kube
-    sudo cp -i /etc/kubernetes/admin.conf /home/vagrant/.kube/config
-    sudo chown $(id -u vagrant):$(id -g vagrant) /home/vagrant/.kube/config
-
-    # install Calico pod network addon
-    export KUBECONFIG=/etc/kubernetes/admin.conf
-    kubectl apply -f https://raw.githubusercontent.com/ecomm-integration-ballerina/kubernetes-cluster/master/calico/rbac-kdd.yaml
-    kubectl apply -f https://raw.githubusercontent.com/ecomm-integration-ballerina/kubernetes-cluster/master/calico/calico.yaml
-
-    kubeadm token create --print-join-command >> /etc/kubeadm_join_cmd.sh
-    chmod +x /etc/kubeadm_join_cmd.sh
-
-    # required for setting up password less ssh between guest VMs
-    sudo sed -i "/^[^#]*PasswordAuthentication[[:space:]]no/c\PasswordAuthentication yes" /etc/ssh/sshd_config
-    sudo service sshd restart
-
-SCRIPT
-
-$configureMasterSingle = <<-SCRIPT
-    echo "This is master of a single node k8s cluster"
-    # ip of this box
-    IP_ADDR=`ifconfig enp0s8 | grep Mask | awk '{print $2}'| cut -f2 -d:`
-
-    echo 'adding insecure registries...'
-    echo '{ "insecure-registries":["10.18.84.169:5000"] }' | sudo tee /etc/docker/daemon.json
-    sudo service docker restart
-
-    # setup nfs server
-    sudo apt-get install -y nfs-kernel-server
-    sudo mkdir /var/nfs -p
-    sudo chown nobody:nogroup /var/nfs
-
-    echo -e "/var/nfs 192.168.205.10(rw,sync,no_subtree_check,no_root_squash)" | sudo tee -a /etc/exports
-
-    sudo systemctl restart nfs-kernel-server
-    sudo chmod a+rwx /var/nfs
-    sudo ls -l /var
-
-    # mount locally
-    sudo apt install -y nfs-common
-    sudo mkdir -p /nfs
-    sudo mount 192.168.205.10:/var/nfs /nfs
-
-    # setup docker registry. TRY again!
-    # docker run -d -p 5000:5000 --restart=always --name registry registry:2
-
-    # install k8s master
-    HOST_NAME=$(hostname -s)
-    kubeadm init --apiserver-advertise-address=$IP_ADDR --apiserver-cert-extra-sans=$IP_ADDR  --node-name $HOST_NAME --pod-network-cidr=172.16.0.0/16
-
-    #copying credentials to regular user - vagrant
-    sudo --user=vagrant mkdir -p /home/vagrant/.kube
-    sudo cp -i /etc/kubernetes/admin.conf /home/vagrant/.kube/config
-    sudo chown $(id -u vagrant):$(id -g vagrant) /home/vagrant/.kube/config
-
-    # install Calico pod network addon
-    export KUBECONFIG=/etc/kubernetes/admin.conf
-    kubectl apply -f https://raw.githubusercontent.com/ecomm-integration-ballerina/kubernetes-cluster/master/calico/rbac-kdd.yaml
-    kubectl apply -f https://raw.githubusercontent.com/ecomm-integration-ballerina/kubernetes-cluster/master/calico/calico.yaml
-
-    kubeadm token create --print-join-command >> /etc/kubeadm_join_cmd.sh
-    chmod +x /etc/kubeadm_join_cmd.sh
-
-    # required for setting up password less ssh between guest VMs
-    sudo sed -i "/^[^#]*PasswordAuthentication[[:space:]]no/c\PasswordAuthentication yes" /etc/ssh/sshd_config
-    sudo service sshd restart
-
-    # make scheduling on master possible
-    kubectl taint nodes --all node-role.kubernetes.io/master-
-
-SCRIPT
-
-$configureNode = <<-SCRIPT
-    echo "This is worker"
-
-    echo 'adding insecure registries...'
-    echo '{ "insecure-registries":["10.18.84.169:5000" ,"docker.wdf.sap.corp:50000"] }' | sudo tee /etc/docker/daemon.json
-    sudo service docker restart
-
-    # setup nfs
-    sudo apt install -y nfs-common
-    sudo mkdir -p /nfs
-    sudo mount 192.168.205.10:/var/nfs /nfs
-
-    apt-get install -y sshpass
-    sshpass -p "vagrant" scp -o StrictHostKeyChecking=no vagrant@192.168.205.10:/etc/kubeadm_join_cmd.sh .
-    sh ./kubeadm_join_cmd.sh
-SCRIPT
+puts "Docker registry is #{dockerRegistry}"
 
 Vagrant.configure("2") do |config|
 
@@ -237,7 +88,7 @@ Vagrant.configure("2") do |config|
             config.vm.provider "virtualbox" do |v|
 
                 v.name = opts[:name]
-            	v.customize ["modifyvm", :id, "--groups", "/Ballerina Development"]
+            	v.customize ["modifyvm", :id, "--groups", "/LocalCluster"]
                 v.customize ["modifyvm", :id, "--memory", opts[:mem]]
                 v.customize ["modifyvm", :id, "--cpus", opts[:cpu]]
 
@@ -246,20 +97,33 @@ Vagrant.configure("2") do |config|
             # we cannot use this because we can't install the docker version we want - https://github.com/hashicorp/vagrant/issues/4871
             #config.vm.provision "docker"
 
-            config.vm.provision "shell", inline: $configureBox
+            config.vm.provision "shell", path: "configure_box.sh"
 
             if opts[:type] == "master"
                 if k8sType == "single"
-                    config.vm.provision "shell", inline: $configureMasterSingle
+                    config.vm.provision "shell",
+                    env: {
+                        "K8S_MASTER_IP" => k8sMasterIP,
+                        "DOCKER_REGISTRY" => dockerRegistry
+                    },
+                    path: "configure_master_single.sh"
                 else
-                    config.vm.provision "shell", inline: $configureMasterMulti
+                    config.vm.provision "shell",
+                    env: {
+                        "K8S_NODE1IP_IP" => k8sNode1IP,
+                        "K8S_NODE2IP_IP" => k8sNode2IP,
+                        "DOCKER_REGISTRY" => dockerRegistry
+                    },
+                    path: "configure_master_multi.sh"
                 end
             else
-                config.vm.provision "shell", inline: $configureNode
+                config.vm.provision "shell",
+                env: {
+                    "K8S_MASTER_IP" => k8sMasterIP,
+                    "DOCKER_REGISTRY" => dockerRegistry
+                },
+                path: "configure_worker.sh"
             end
-
         end
-
     end
-
 end 
