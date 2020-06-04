@@ -47,9 +47,9 @@ singleNode = [
         :box => "ubuntu/xenial64",
         :box_version => "20180831.0.0",
         :eth1 => k8sMasterIP,
-        :mem => "16384",
-        :cpu => "4",
-        :disk => "50GB"
+        :mem => "3072",
+        :cpu => "2",
+        :disk => "10GB"
     }
 ]
 

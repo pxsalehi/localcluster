@@ -2,34 +2,26 @@
 
 
 k8s_head_ip=192.168.205.10
-docker_registry=10.18.84.169:5000
-vagrant_k8s_folder=${GOPATH}/src/github.com/pxsalehi/localcluster
-number_of_pvs=10
+docker_registry=$(DOCKER_REGISTRY)
+number_of_pvs=5
 pv_size=5  # in GB
 
 tear_down_k8s() {
     echo "tearing down k8s cluster..."
-    cd ${vagrant_k8s_folder}
     K8S_TYPE=${CLUSTER_TYPE} DOCKER_REGISTRY=${docker_registry} vagrant destroy -f
-    cd -
 }
 
 suspend_k8s() {
     echo "suspending k8s cluster..."
-    cd ${vagrant_k8s_folder}
     K8S_TYPE=${CLUSTER_TYPE} DOCKER_REGISTRY=${docker_registry} vagrant suspend
-    cd -
 }
 
 resume_k8s() {
     echo "resuming k8s cluster..."
-    cd ${vagrant_k8s_folder}
     K8S_TYPE=${CLUSTER_TYPE} DOCKER_REGISTRY=${docker_registry} vagrant resume
-    cd -
 }
 
 start_k8s() {
-    cd ${vagrant_k8s_folder}
     K8S_TYPE=${CLUSTER_TYPE} DOCKER_REGISTRY=${docker_registry} vagrant up
     if [[ ! $? -eq 0 ]]; then
         echo "vagrant up failed"
@@ -53,7 +45,7 @@ deploy_tiller() {
 }
 
 create_pvs() {
-    for i in `seq 1 10`;
+    for i in `seq 1 5`;
     do
     echo \
 "apiVersion: v1
