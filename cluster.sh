@@ -6,7 +6,7 @@ insecure_registries=${INSECURE_REGISTRIES}
 # single or multi
 cluster_type=${CLUSTER_TYPE:-single}
 number_of_pvs=5
-pv_size=5  # in GB
+pv_size=10  # in GB
 
 destroy() {
     echo "tearing down k8s cluster..."
@@ -23,7 +23,7 @@ resume() {
     CLUSTER_TYPE=${cluster_type} vagrant resume
 }
 
-start_k8s() {
+create() {
     CLUSTER_TYPE=${cluster_type} INSECURE_REGISTRIES=${insecure_registries} vagrant up
     if [[ ! $? -eq 0 ]]; then
         echo "vagrant up failed"
@@ -36,14 +36,7 @@ start_k8s() {
         echo "cannot list k8s nodes"
         exit 1
     fi
-#    deploy_tiller
     create_pvs
-}
-
-deploy_tiller() {
-    echo "deploying tiller"
-    kubectl create -f tiller_rbac.yaml
-    helm init --service-account tiller
 }
 
 create_pvs() {

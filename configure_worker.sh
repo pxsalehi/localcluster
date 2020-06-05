@@ -4,7 +4,7 @@ echo "This is worker"
 
 if [[ ! -z "$INSECURE_REGISTRIES" ]]; then
     echo 'adding insecure registries...'
-    echo "{ \"insecure-registries\":[\"${INSECURE_REGISTRIES}\"] }" | sudo tee /etc/docker/daemon.json
+    echo "{ \"insecure-registries\":[${INSECURE_REGISTRIES}] }" | sudo tee /etc/docker/daemon.json
     sudo service docker restart
 fi
 

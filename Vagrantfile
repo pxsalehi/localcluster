@@ -11,32 +11,32 @@ multiNodes = [
     {
         :name => "k8s-master",
         :type => "master",
-        :box => "ubuntu/bionic64",
-        :box_version => "20200519.1.0",
+        :box => "ubuntu/xenial64",
+        :box_version => "20200514.0.0",
         :eth1 => k8sMasterIP,
         :mem => "4096",
         :cpu => "2",
-        :disk => "50GB"
+        :disk => "20GB"
     },
     {
         :name => "k8s-node1",
         :type => "node",
-        :box => "ubuntu/bionic64",
-        :box_version => "20200519.1.0",
+        :box => "ubuntu/xenial64",
+        :box_version => "20200514.0.0",
         :eth1 => k8sNode1IP,
         :mem => "8192",
         :cpu => "2",
-        :disk => "50GB"
+        :disk => "30GB"
     },
     {
         :name => "k8s-node2",
         :type => "node",
-        :box => "ubuntu/bionic64",
-        :box_version => "20200519.1.0",
+        :box => "ubuntu/xenial64",
+        :box_version => "20200514.0.0",
         :eth1 => k8sNode2IP,
         :mem => "4096",
         :cpu => "2",
-        :disk => "50GB"
+        :disk => "30GB"
     }
 ]
 
@@ -44,16 +44,16 @@ singleNode = [
     {
         :name => "k8s-master",
         :type => "master",
-        :box => "ubuntu/bionic64",
-        :box_version => "20200519.1.0",
+        :box => "ubuntu/xenial64",
+        :box_version => "20200514.0.0",
         :eth1 => k8sMasterIP,
-        :mem => "3072",
+        :mem => "4096",
         :cpu => "2",
-        :disk => "10GB"
+        :disk => "20GB"
     }
 ]
 
-k8sType = "multi" if k8sType.nil? || k8sType.empty?
+k8sType = "single" if k8sType.nil? || k8sType.empty?
 
 if k8sType != "single" && k8sType != "multi"
     puts "only k8s type of 'single' and 'multi' is acceptable"

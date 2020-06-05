@@ -7,7 +7,7 @@ IP_ADDR=`ifconfig enp0s8 | grep Mask | awk '{print $2}'| cut -f2 -d:`
 
 if [[ ! -z "$INSECURE_REGISTRIES" ]]; then
     echo 'adding insecure registries...'
-    echo "{ \"insecure-registries\":[\"${INSECURE_REGISTRIES}\"] }" | sudo tee /etc/docker/daemon.json
+    echo "{ \"insecure-registries\":[${INSECURE_REGISTRIES}] }" | sudo tee /etc/docker/daemon.json
     sudo service docker restart
 fi
 
@@ -53,3 +53,6 @@ fi
 # required for setting up password less ssh between guest VMs
 sudo sed -i "/^[^#]*PasswordAuthentication[[:space:]]no/c\PasswordAuthentication yes" /etc/ssh/sshd_config
 sudo service sshd restart
+
+# make scheduling on master possible
+kubectl taint nodes --all node-role.kubernetes.io/master-
