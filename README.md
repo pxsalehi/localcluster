@@ -1,5 +1,6 @@
 # Kubernetes cluster
-A vagrant script for setting up a Kubernetes cluster
+A vagrant script for setting up a Kubernetes cluster based on:
+https://github.com/ecomm-integration-ballerina/kubernetes-cluster
 
 ## Pre-requisites
 
