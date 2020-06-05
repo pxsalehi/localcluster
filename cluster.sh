@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 
-
 k8s_head_ip=192.168.205.10
-docker_registry=$(DOCKER_REGISTRY)
+# If provided, the registries are added to /etc/docker/daemon.json under insecure-registries
+insecure_registries=$(INSECURE_REGISTRIES)
+# single or multi
+cluster_type=$(CLUSTER_TYPE)
 number_of_pvs=5
 pv_size=5  # in GB
 
 tear_down_k8s() {
     echo "tearing down k8s cluster..."
-    K8S_TYPE=${CLUSTER_TYPE} DOCKER_REGISTRY=${docker_registry} vagrant destroy -f
+    CLUSTER_TYPE=${cluster_type} INSECURE_REGISTRIES=${insecure_registries} vagrant destroy -f
 }
 
 suspend_k8s() {
@@ -34,7 +36,7 @@ start_k8s() {
         echo "cannot list k8s nodes"
         exit 1
     fi
-    deploy_tiller
+#    deploy_tiller
     create_pvs
 }
 

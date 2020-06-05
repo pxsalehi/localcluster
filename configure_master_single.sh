@@ -5,9 +5,11 @@ echo "This is master of a single node k8s cluster"
 # ip of this box
 IP_ADDR=`ifconfig enp0s8 | grep Mask | awk '{print $2}'| cut -f2 -d:`
 
-echo 'adding insecure registries...'
-echo "{ \"insecure-registries\":[\"${DOCKER_REGISTRY}\"] }" | sudo tee /etc/docker/daemon.json
-sudo service docker restart
+if [[ ! -z "$INSECURE_REGISTRIES" ]]; then
+    echo 'adding insecure registries...'
+    echo "{ \"insecure-registries\":[\"${INSECURE_REGISTRIES}\"] }" | sudo tee /etc/docker/daemon.json
+    sudo service docker restart
+fi
 
 # setup nfs server
 sudo apt-get install -y nfs-kernel-server
