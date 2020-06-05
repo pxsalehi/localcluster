@@ -2,36 +2,36 @@
 
 k8s_head_ip=192.168.205.10
 # If provided, the registries are added to /etc/docker/daemon.json under insecure-registries
-insecure_registries=$(INSECURE_REGISTRIES)
+insecure_registries=${INSECURE_REGISTRIES}
 # single or multi
-cluster_type=$(CLUSTER_TYPE)
+cluster_type=${CLUSTER_TYPE:-single}
 number_of_pvs=5
 pv_size=5  # in GB
 
-tear_down_k8s() {
+destroy() {
     echo "tearing down k8s cluster..."
-    CLUSTER_TYPE=${cluster_type} INSECURE_REGISTRIES=${insecure_registries} vagrant destroy -f
+    CLUSTER_TYPE=${cluster_type} vagrant destroy -f
 }
 
-suspend_k8s() {
+suspend() {
     echo "suspending k8s cluster..."
-    K8S_TYPE=${CLUSTER_TYPE} DOCKER_REGISTRY=${docker_registry} vagrant suspend
+    CLUSTER_TYPE=${cluster_type} vagrant suspend
 }
 
-resume_k8s() {
+resume() {
     echo "resuming k8s cluster..."
-    K8S_TYPE=${CLUSTER_TYPE} DOCKER_REGISTRY=${docker_registry} vagrant resume
+    CLUSTER_TYPE=${cluster_type} vagrant resume
 }
 
 start_k8s() {
-    K8S_TYPE=${CLUSTER_TYPE} DOCKER_REGISTRY=${docker_registry} vagrant up
+    CLUSTER_TYPE=${cluster_type} INSECURE_REGISTRIES=${insecure_registries} vagrant up
     if [[ ! $? -eq 0 ]]; then
         echo "vagrant up failed"
         exit 1
     fi
     ssh-keygen -f "${HOME}/.ssh/known_hosts" -R ${k8s_head_ip}
     sshpass -p "vagrant" scp -o StrictHostKeyChecking=no vagrant@${k8s_head_ip}:~/.kube/config ${HOME}/.kube/config
-    kubectl get nodes
+    kubectl get nodes --insecure-skip-tls-verify
     if [[ ! $? -eq 0 ]]; then
         echo "cannot list k8s nodes"
         exit 1

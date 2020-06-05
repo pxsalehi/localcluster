@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-DOCKER_VERSION=18.06
+DOCKER_VERSION=19.03
 K8S_VERSION=1.17.0-00
 # reason for not using docker provision is that it always installs latest version of the docker, but kubeadm requires 17.03 or older
 apt-get update

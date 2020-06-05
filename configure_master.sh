@@ -42,8 +42,7 @@ sudo chown $(id -u vagrant):$(id -g vagrant) /home/vagrant/.kube/config
 
 # install Calico pod network addon
 export KUBECONFIG=/etc/kubernetes/admin.conf
-kubectl apply -f https://raw.githubusercontent.com/ecomm-integration-ballerina/kubernetes-cluster/master/calico/rbac-kdd.yaml
-kubectl apply -f https://raw.githubusercontent.com/ecomm-integration-ballerina/kubernetes-cluster/master/calico/calico.yaml
+kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
 
 if [[ "$CLUSTER_TYPE" = "multi" ]];
 then
