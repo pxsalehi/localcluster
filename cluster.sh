@@ -65,7 +65,62 @@ spec:
 
     kubectl create -f pv_temp.yaml
     rm pv_temp.yaml
+    done    
+    
+    for i in `seq 6 10`;
+    do
+    echo \
+"apiVersion: v1
+kind: PersistentVolume
+metadata:
+ name: pv-nfs-00${i}
+spec:
+ capacity:
+   storage: 1Gi
+ volumeMode: Filesystem
+ accessModes:
+   - ReadWriteOnce
+ persistentVolumeReclaimPolicy: Recycle
+ storageClassName:
+ mountOptions:
+   - hard
+   - nfsvers=4.2
+ nfs:
+   path: /var/nfs
+   server: ${k8s_head_ip}" \
+  > pv_temp.yaml
+
+    kubectl create -f pv_temp.yaml
+    rm pv_temp.yaml
     done
+
+    for i in `seq 11  15`;
+    do
+    echo \
+"apiVersion: v1
+kind: PersistentVolume
+metadata:
+ name: pv-nfs-00${i}
+spec:
+ capacity:
+   storage: 2Gi
+ volumeMode: Filesystem
+ accessModes:
+   - ReadWriteOnce
+ persistentVolumeReclaimPolicy: Recycle
+ storageClassName:
+ mountOptions:
+   - hard
+   - nfsvers=4.2
+ nfs:
+   path: /var/nfs
+   server: ${k8s_head_ip}" \
+  > pv_temp.yaml
+
+    kubectl create -f pv_temp.yaml
+    rm pv_temp.yaml
+    done
+
 }
 
 "$@"
