@@ -39,36 +39,12 @@ create() {
     create_pvs
 }
 
-create_pvs() {
-	for size in ${pv_sizes[@]};
-	do
-		for i in `seq 1  ${number_of_pvs}`;
-		do
-			# have to replace Gi/Mi with gi/mi to be a valid PV name
-			pv_name=$(echo "pv-nfs-${size}-$(date +%s)" | tr '[:upper:]' '[:lower:]')
-			cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: PersistentVolume
-metadata:
- name: ${pv_name}
-spec:
- capacity:
-   storage: ${size}
- volumeMode: Filesystem
- accessModes:
-   - ReadWriteOnce
- persistentVolumeReclaimPolicy: Delete
- storageClassName:
- mountOptions:
-   - hard
-   - nfsvers=4.2
- nfs:
-   path: /var/nfs
-   server: ${k8s_head_ip}
-EOF
-        done		  
-    done
-
+# sets up dynamic provisioning
+setup_nfs() {
+	helm repo add stable https://kubernetes-charts.storage.googleapis.com
+	helm install stable/nfs-client-provisioner --set nfs.server=x.x.x.x --set nfs.path=/exported/path  --set storageClass.archiveOnDelete=false
+	# create pvc with the following annotation in metadata.annotations:
+	# volume.beta.kubernetes.io/storage-class: "nfs-client"
 }
 
 "$@"
