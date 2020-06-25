@@ -42,7 +42,7 @@ create() {
 # sets up dynamic provisioning
 setup_nfs() {
 	helm repo add stable https://kubernetes-charts.storage.googleapis.com
-	helm install stable/nfs-client-provisioner --set nfs.server=x.x.x.x --set nfs.path=/exported/path  --set storageClass.archiveOnDelete=false
+	helm install stable/nfs-client-provisioner --set nfs.server=${k8s_head_ip} --set nfs.path=/var/nfs  --set storageClass.archiveOnDelete=false
 	# create pvc with the following annotation in metadata.annotations:
 	# volume.beta.kubernetes.io/storage-class: "nfs-client"
 }
