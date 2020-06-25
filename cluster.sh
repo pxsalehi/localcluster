@@ -5,8 +5,8 @@ k8s_head_ip=192.168.205.10
 insecure_registries=${INSECURE_REGISTRIES}
 # single or multi
 cluster_type=${CLUSTER_TYPE:-single}
-number_of_pvs=5
-pv_size=10  # in GB
+number_of_pvs=10
+pv_sizes=("100Mi" "2Gi")
 
 destroy() {
     echo "tearing down k8s cluster..."
@@ -40,85 +40,33 @@ create() {
 }
 
 create_pvs() {
-    for i in `seq 1 5`;
-    do
-    echo \
-"apiVersion: v1
+	for size in ${pv_sizes[@]};
+	do
+		for i in `seq 1  ${number_of_pvs}`;
+		do
+			# have to replace Gi/Mi with gi/mi to be a valid PV name
+			pv_name=$(echo "pv-nfs-${size}-$(date +%s)" | tr '[:upper:]' '[:lower:]')
+			cat <<EOF | kubectl apply -f -
+apiVersion: v1
 kind: PersistentVolume
 metadata:
- name: pv-nfs-00${i}
+ name: ${pv_name}
 spec:
  capacity:
-   storage: ${pv_size}Gi
+   storage: ${size}
  volumeMode: Filesystem
  accessModes:
    - ReadWriteOnce
- persistentVolumeReclaimPolicy: Recycle
+ persistentVolumeReclaimPolicy: Delete
  storageClassName:
  mountOptions:
    - hard
    - nfsvers=4.2
  nfs:
    path: /var/nfs
-   server: ${k8s_head_ip}" \
-  > pv_temp.yaml
-
-    kubectl create -f pv_temp.yaml
-    rm pv_temp.yaml
-    done    
-    
-    for i in `seq 6 10`;
-    do
-    echo \
-"apiVersion: v1
-kind: PersistentVolume
-metadata:
- name: pv-nfs-00${i}
-spec:
- capacity:
-   storage: 1Gi
- volumeMode: Filesystem
- accessModes:
-   - ReadWriteOnce
- persistentVolumeReclaimPolicy: Recycle
- storageClassName:
- mountOptions:
-   - hard
-   - nfsvers=4.2
- nfs:
-   path: /var/nfs
-   server: ${k8s_head_ip}" \
-  > pv_temp.yaml
-
-    kubectl create -f pv_temp.yaml
-    rm pv_temp.yaml
-    done
-
-    for i in `seq 11  15`;
-    do
-    echo \
-"apiVersion: v1
-kind: PersistentVolume
-metadata:
- name: pv-nfs-00${i}
-spec:
- capacity:
-   storage: 2Gi
- volumeMode: Filesystem
- accessModes:
-   - ReadWriteOnce
- persistentVolumeReclaimPolicy: Recycle
- storageClassName:
- mountOptions:
-   - hard
-   - nfsvers=4.2
- nfs:
-   path: /var/nfs
-   server: ${k8s_head_ip}" \
-  > pv_temp.yaml
-
-    kubectl create -f pv_temp.yaml
-    rm pv_temp.yaml
+   server: ${k8s_head_ip}
+EOF
+        done		  
     done
 
 }
