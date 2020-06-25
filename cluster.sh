@@ -36,7 +36,6 @@ create() {
         echo "cannot list k8s nodes"
         exit 1
     fi
-    create_pvs
 }
 
 # sets up dynamic provisioning
