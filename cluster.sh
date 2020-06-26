@@ -5,8 +5,8 @@ k8s_head_ip=192.168.205.10
 insecure_registries=${INSECURE_REGISTRIES}
 # single or multi
 cluster_type=${CLUSTER_TYPE:-single}
-number_of_pvs=10
-pv_sizes=("100Mi" "2Gi")
+number_of_pvs=5
+pv_size=2Gi
 
 destroy() {
     echo "tearing down k8s cluster..."
@@ -44,6 +44,26 @@ setup_nfs() {
 	helm install stable/nfs-client-provisioner --set nfs.server=${k8s_head_ip} --set nfs.path=/var/nfs  --set storageClass.archiveOnDelete=false
 	# create pvc with the following annotation in metadata.annotations:
 	# volume.beta.kubernetes.io/storage-class: "nfs-client"
+}
+
+create_pvs() {
+	for i in `seq 1  ${number_of_pvs}`;
+	do
+		cat <<EOF | kubectl apply -f -
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: hostpath-pv-${i}
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Recycle
+  hostPath:
+    path: "/var/hostpath/pv${i}"
+EOF
+	done
 }
 
 "$@"
