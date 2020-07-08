@@ -2,10 +2,11 @@
 
 k8s_head_ip=192.168.205.10
 # If provided, the registries are added to /etc/docker/daemon.json under insecure-registries
+# Should be of the form: "registry1","registry2"
 insecure_registries=${INSECURE_REGISTRIES}
 # single or multi
 cluster_type=${CLUSTER_TYPE:-single}
-number_of_pvs=5
+number_of_pvs=6
 pv_size=2Gi
 
 destroy() {
@@ -41,7 +42,7 @@ create() {
 # sets up dynamic provisioning
 setup_nfs() {
 	helm repo add stable https://kubernetes-charts.storage.googleapis.com
-	helm install stable/nfs-client-provisioner --set nfs.server=${k8s_head_ip} --set nfs.path=/var/nfs  --set storageClass.archiveOnDelete=false
+	helm install nfs-prov stable/nfs-client-provisioner --set nfs.server=${k8s_head_ip} --set nfs.path=/var/nfs  --set storageClass.archiveOnDelete=false
 	# create pvc with the following annotation in metadata.annotations:
 	# volume.beta.kubernetes.io/storage-class: "nfs-client"
 }
